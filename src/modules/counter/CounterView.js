@@ -1,5 +1,5 @@
 import React, {PropTypes, Component} from "react";
-import {StyleSheet, TouchableOpacity, Image, Text, View} from "react-native";
+import {StyleSheet, TouchableOpacity, Image, Text, View, BackAndroid} from "react-native";
 import Icon from "react-native-vector-icons/MaterialIcons";
 
 class CounterView extends Component {
@@ -8,20 +8,97 @@ class CounterView extends Component {
 
     constructor(props) {
         super(props);
+
+        const username = "admin";
+        const password = "admin";
+
         this.state = {
-            rcInfo: ''
+            authToken: '',
+            userId: '',
+            userName: ''
         };
 
-        //fetch('https://demo.rocket.chat/api/v1/info')
-        fetch('http://192.168.0.26:3000/api/v1/info')
-            .then((response) => response.json())
+        fetch('http://192.168.0.22:3000/api/v1/login', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                username: username,
+                password: password,
+            })
+        }).then((response) => response.json())
             .then((responseJson) => {
-                this.setState({rcInfo: responseJson.success});
+                this.setState({authToken: responseJson.data.authToken});
+                this.setState({userId: responseJson.data.userId});
+
+                if (!this.state.authToken || !this.state.userId) {
+                    console.log("####################### LOGIN ERROR : !this.state.authToken '" + !this.state.authToken
+                        + "' || !this.state.userId = '" + !this.state.userId + "'");
+                    BackAndroid.exitApp();
+                }
+                fetch(`http://192.168.0.22:3000/api/v1/me`, {
+                    "method": "GET",
+                    "headers": {
+                        "x-auth-token": this.state.authToken,
+                        "x-user-id": this.state.userId
+                    }
+                }).then((response) => response.json())
+                    .then((responseJson) => {
+                        console.log("####################### ME userName : " + responseJson.username);
+                        console.log("####################### ME status : " + responseJson.status);
+                        this.setState({userName: responseJson.name});
+                        if (!this.state.userName) {
+                            console.log("####################### ME ERROR");
+                            BackAndroid.exitApp();
+                        }
+                    })
+                    .catch((error) => {
+                        console.log("####################### api/v1/me error");
+                        console.error(error);
+                        console.log("####################### api/v1/me error");
+                    });
+                fetch(`http://192.168.0.22:3000/api/v1/groups.list`, {
+                    "method": "GET",
+                    "headers": {
+                        "x-auth-token": this.state.authToken,
+                        "x-user-id": this.state.userId
+                    }
+                }).then((response) => response.json())
+                    .then((responseJson) => {
+                        console.log("####################### channels.list.joined JSON.stringify : " + JSON.stringify(responseJson));
+                    })
+                    .catch((error) => {
+                        console.log("####################### api/v1/channels.list.joined error");
+                        console.error(error);
+                        console.log("####################### api/v1/channels.list.joined error");
+                    });
+                fetch(`http://192.168.0.22:3000/api/v1/chat.postMessage`, {
+                    "method": "POST",
+                    "headers": {
+                        "x-auth-token": this.state.authToken,
+                        "x-user-id": this.state.userId,
+                        "content-type": "application/json"
+                    },
+                    body: JSON.stringify({
+                        channel: "channel1",
+                        text: "This is a test!"
+                    })
+                }).then((response) => response.json())
+                    .then((responseJson) => {
+                        console.log("####################### channels.list.joined JSON.stringify : " + JSON.stringify(responseJson));
+                    })
+                    .catch((error) => {
+                        console.log("####################### api/v1/channels.list.joined error");
+                        console.error(error);
+                        console.log("####################### api/v1/channels.list.joined error");
+                    });
             })
             .catch((error) => {
-                console.log("####################### error");
+                console.log("####################### api/v1/login error");
                 console.error(error);
-                console.log("####################### error");
+                console.log("####################### api/v1/login error");
             });
     }
 
@@ -129,7 +206,7 @@ class CounterView extends Component {
                     </Text>
                 </TouchableOpacity>
 
-                <Text style={styles.red}>{"--" + this.state.rcInfo + "--"}</Text>
+                <Text style={styles.red}>{"--" + this.state.userName + "--"}</Text>
             </View>
         );
     }
