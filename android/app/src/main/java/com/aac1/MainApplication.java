@@ -1,4 +1,4 @@
-package com.pepperoniapptemplate;
+package com.aac1;
 
 import android.app.Application;
 
